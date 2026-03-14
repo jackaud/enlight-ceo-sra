@@ -306,10 +306,11 @@ async def reporting_node(state: AssessmentState) -> dict:
         ml_result=json.dumps(state["ml_result"], ensure_ascii=False, indent=2),
     )
 
+    # Only send system prompt + a single user message (no full history needed for reporting)
     system = SystemMessage(content=prompt)
-    messages = [system] + state["messages"]
+    user_msg = HumanMessage(content="Please present the succession readiness report.")
 
-    response = await llm.ainvoke(messages)
+    response = await llm.ainvoke([system, user_msg])
     return {
         "messages": [response],
         "phase": "complete",
