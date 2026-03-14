@@ -16,9 +16,12 @@ ALLOWED_ORIGINS = os.getenv(
 ).split(",")
 
 # Create Socket.IO server
+# Increase timeouts for long-running LLM calls (Sonnet can take 30-60s)
 sio = socketio.AsyncServer(
     async_mode="asgi",
     cors_allowed_origins=ALLOWED_ORIGINS,
+    ping_timeout=120,
+    ping_interval=25,
 )
 
 # Create FastAPI app
@@ -56,20 +59,6 @@ async def set_llm_mode(mode: str):
     return {"mode": mode, "message": f"Switched to {mode}"}
 
 
-@app.get("/form-mode")
-async def get_form_mode():
-    from tools.assessment_form import FORM_MODE
-    return {"mode": FORM_MODE}
-
-
-@app.post("/form-mode/{mode}")
-async def set_form_mode(mode: str):
-    import tools.assessment_form as af
-    if mode not in ("static", "dynamic"):
-        from fastapi import HTTPException
-        raise HTTPException(400, f"Invalid mode: {mode}. Use static/dynamic")
-    af.FORM_MODE = mode
-    return {"mode": mode, "message": f"Switched to {mode}"}
 
 
 # Socket.IO event handlers

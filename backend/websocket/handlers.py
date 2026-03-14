@@ -113,6 +113,7 @@ async def handle_form_cancel(sio, sid, data):
 
 async def run_and_stream(sio, sid, session_id: str, state: dict):
     """Run the current phase and stream response to client."""
+    phase_before = state.get("phase", "?")
     message_id = str(uuid.uuid4())
 
     # Emit chat_start
@@ -126,9 +127,12 @@ async def run_and_stream(sio, sid, session_id: str, state: dict):
     sessions[session_id] = new_state
 
     # Extract AI messages from updates to stream
+    # Skip AIMessages that contain tool_calls — their text is just preamble
     ai_messages = []
     for msg in updates.get("messages", []):
         if isinstance(msg, AIMessage) and msg.content:
+            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                continue
             text = extract_text(msg.content)
             if text:
                 ai_messages.append(text)
@@ -150,11 +154,13 @@ async def run_and_stream(sio, sid, session_id: str, state: dict):
 
     # Attach form if pending
     pending = new_state.get("pending_form")
+    form_was_sent = False
     if pending and isinstance(pending, dict) and pending.get("form_schema"):
         complete_payload["ui_forms"] = [{
             "form_instance_id": str(uuid.uuid4()),
             **pending,
         }]
+        form_was_sent = True
 
     # Attach progress if in collecting phase
     if new_state.get("phase") in ("collecting", "analyzing") or new_state.get("pending_form"):
@@ -170,10 +176,15 @@ async def run_and_stream(sio, sid, session_id: str, state: dict):
 
     await sio.emit("chat_complete", complete_payload, to=sid)
 
-    # If phase transitioned to collecting, auto-run collecting_node to show first form
-    if new_state.get("phase") == "collecting" and not new_state.get("pending_form"):
+    # Auto-run collecting ONLY on phase transition from intake → collecting (once)
+    phase_after = new_state.get("phase", "?")
+    if phase_before != "collecting" and phase_after == "collecting":
         await run_and_stream(sio, sid, session_id, sessions[session_id])
         return
+
+    # Clear pending_form AFTER auto-run check to prevent re-sending on subsequent calls
+    if form_was_sent:
+        sessions[session_id]["pending_form"] = {}
 
     # If we've entered analyzing or reporting, run through to final report
     if new_state.get("phase") in ("analyzing", "reporting"):
@@ -191,13 +202,34 @@ async def auto_run_to_report(sio, sid, session_id: str):
         message_id = str(uuid.uuid4())
         await sio.emit("chat_start", {"message_id": message_id}, to=sid)
 
-        updates = await run_phase(state)
-        state = apply_updates(state, updates)
-        sessions[session_id] = state
+        try:
+            phase = state.get("phase")
+            # Send progress hint before long-running LLM calls
+            if phase == "reporting":
+                await sio.emit("chat_chunk", {
+                    "message_id": message_id,
+                    "content": "Generating your succession readiness report...\n\n",
+                }, to=sid)
+            updates = await run_phase(state)
+            state = apply_updates(state, updates)
+            sessions[session_id] = state
+        except Exception as e:
+            print(f"[report] ERROR in phase={state.get('phase')}: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            # Send error message to client
+            await sio.emit("chat_chunk", {
+                "message_id": message_id,
+                "content": f"An error occurred generating the report. Please try refreshing. ({type(e).__name__})",
+            }, to=sid)
+            await sio.emit("chat_complete", {"message_id": message_id}, to=sid)
+            return
 
-        # Stream messages
+        # Stream messages — skip tool_call preamble
         for msg in updates.get("messages", []):
             if isinstance(msg, AIMessage) and msg.content:
+                if hasattr(msg, "tool_calls") and msg.tool_calls:
+                    continue
                 content = extract_text(msg.content)
                 if not content:
                     continue

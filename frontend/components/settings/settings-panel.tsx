@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:7101";
 
 type LlmMode = "mock" | "haiku" | "sonnet";
-type FormMode = "static" | "dynamic";
+type FormMode = "static" | "config" | "autogen";
 
 const LLM_MODE_INFO: Record<LlmMode, { label: string; desc: string }> = {
   mock: { label: "Mock", desc: "No LLM calls — instant, free" },
@@ -13,22 +13,22 @@ const LLM_MODE_INFO: Record<LlmMode, { label: string; desc: string }> = {
   sonnet: { label: "Sonnet", desc: "Best quality — production use" },
 };
 
-const FORM_MODE_INFO: Record<FormMode, { label: string; desc: string }> = {
-  static: { label: "Static", desc: "Predefined form templates" },
-  dynamic: { label: "AI-Generated", desc: "LLM generates form fields dynamically" },
+const FORM_MODE_INFO: Record<FormMode, { label: string; desc: string; available: boolean }> = {
+  static: { label: "Static", desc: "Sterling Black methodology — hardcoded dimensions", available: true },
+  config: { label: "Config", desc: "Custom Success Profiling — board-defined criteria", available: false },
+  autogen: { label: "AutoGen", desc: "LLM generates assessment forms dynamically", available: false },
 };
 
 export function SettingsPanel() {
   const [open, setOpen] = useState(false);
   const [llmMode, setLlmMode] = useState<LlmMode>("mock");
-  const [formMode, setFormMode] = useState<FormMode>("static");
+  const [formMode] = useState<FormMode>("static");
   const [loading, setLoading] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Fetch current modes on mount
+  // Fetch current LLM mode on mount
   useEffect(() => {
     fetch(`${SOCKET_URL}/llm-mode`).then((r) => r.json()).then((d) => setLlmMode(d.mode)).catch(() => {});
-    fetch(`${SOCKET_URL}/form-mode`).then((r) => r.json()).then((d) => setFormMode(d.mode)).catch(() => {});
   }, []);
 
   // Close on click outside
@@ -47,16 +47,6 @@ export function SettingsPanel() {
     try {
       const r = await fetch(`${SOCKET_URL}/llm-mode/${newMode}`, { method: "POST" });
       if (r.ok) setLlmMode(newMode);
-    } catch { /* ignore */ }
-    setLoading(false);
-  };
-
-  const switchFormMode = async (newMode: FormMode) => {
-    if (newMode === formMode || loading) return;
-    setLoading(true);
-    try {
-      const r = await fetch(`${SOCKET_URL}/form-mode/${newMode}`, { method: "POST" });
-      if (r.ok) setFormMode(newMode);
     } catch { /* ignore */ }
     setLoading(false);
   };
@@ -108,28 +98,35 @@ export function SettingsPanel() {
               </div>
             </div>
 
-            {/* Form Mode */}
+            {/* Form Generation — display-only roadmap */}
             <div>
               <label className="text-[11px] font-medium tracking-wider text-sb-dim uppercase">Form Generation</label>
               <div className="mt-2 space-y-1.5">
-                {(Object.keys(FORM_MODE_INFO) as FormMode[]).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => switchFormMode(m)}
-                    disabled={loading}
-                    className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm transition-all ${
-                      formMode === m
-                        ? "border-sb-gold bg-sb-gold/10 text-sb-charcoal"
-                        : "border-sb-warm-border bg-white text-sb-dim hover:border-sb-gold/40"
-                    } disabled:opacity-50`}
-                  >
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${formMode === m ? "bg-sb-gold" : "bg-sb-warm-border"}`} />
-                    <div>
-                      <div className="font-medium">{FORM_MODE_INFO[m].label}</div>
-                      <div className="text-[11px] text-sb-muted">{FORM_MODE_INFO[m].desc}</div>
+                {(Object.keys(FORM_MODE_INFO) as FormMode[]).map((m) => {
+                  const info = FORM_MODE_INFO[m];
+                  const isActive = formMode === m;
+                  return (
+                    <div
+                      key={m}
+                      className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm ${
+                        isActive
+                          ? "border-sb-gold bg-sb-gold/10 text-sb-charcoal"
+                          : "border-sb-warm-border bg-white/50 text-sb-muted"
+                      }`}
+                    >
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${isActive ? "bg-sb-gold" : "bg-sb-warm-border"}`} />
+                      <div className="flex-1">
+                        <div className={`font-medium ${!info.available ? "text-sb-muted" : ""}`}>
+                          {info.label}
+                        </div>
+                        <div className="text-[11px] text-sb-muted">{info.desc}</div>
+                      </div>
+                      {!info.available && (
+                        <span className="text-[9px] tracking-wider text-sb-muted/60 uppercase">Soon</span>
+                      )}
                     </div>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

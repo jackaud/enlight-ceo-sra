@@ -4,16 +4,9 @@ Design philosophy: content driven by Sterling Black's methodology, field types f
 See docs/form-design-analysis.md for detailed rationale.
 """
 
-import json
-import os
 from langchain_core.tools import BaseTool
-from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel, Field
 from tools.base import UIFormField, UIFormSchema, UIFormResult
-
-# FORM_MODE: static (hardcoded) | dynamic (LLM-generated)
-FORM_MODE = os.getenv("FORM_MODE", "static")
 
 
 DIMENSION_LABELS = {
@@ -356,64 +349,6 @@ DIMENSION_BUILDERS = {
 }
 
 
-DYNAMIC_FORM_PROMPT = """Generate a CEO succession readiness assessment form for the dimension: {dimension} ({label}).
-
-The assessor is a {evaluator_role} evaluating an internal CEO succession candidate.
-
-Return a JSON array of 2-4 form fields. Each field must have:
-- "name": unique identifier (e.g. "q1", "q2")
-- "label": the question text
-- "type": one of "radio", "select", "checkbox", "multiselect", "number", "text", "textarea"
-- "required": true or false
-- "options": array of {{"value": "...", "label": "..."}} (required for radio/select/checkbox/multiselect)
-- "placeholder": optional hint text (for text/textarea/number)
-
-Guidelines:
-- Use DIFFERENT field types across questions to create visual variety
-- Frame questions from a board member's perspective: "Is this person ready to be CEO?"
-- For rating questions, use "radio" with a 5-point Likert scale (1=Strongly Disagree to 5=Strongly Agree)
-- For behavioral observation questions, use "checkbox" with 3-5 specific CEO-relevant behaviors
-- For open-ended feedback, use "textarea"
-- Make questions specific to CEO readiness in the {dimension} dimension
-- Keep labels concise but clear
-
-Return ONLY the JSON array, no other text."""
-
-
-def _generate_dynamic_fields(dimension: str, label: str, evaluator_role: str) -> list[UIFormField]:
-    """Use LLM to generate form fields dynamically. Always uses Sonnet for reliable JSON."""
-    from agent.nodes import MODEL_MAP
-
-    llm = ChatAnthropic(model=MODEL_MAP["sonnet"], temperature=0.5, max_tokens=1024)
-
-    prompt = DYNAMIC_FORM_PROMPT.format(
-        dimension=dimension, label=label, evaluator_role=evaluator_role,
-    )
-    response = llm.invoke([
-        SystemMessage(content="You are a form schema generator. Output only valid JSON."),
-        HumanMessage(content=prompt),
-    ])
-
-    try:
-        raw = response.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-            raw = raw.rsplit("```", 1)[0].strip()
-        fields_data = json.loads(raw)
-        fields = [UIFormField(**f) for f in fields_data]
-        print(f"[dynamic form] Generated {len(fields)} fields for {dimension}")
-        return fields
-    except (json.JSONDecodeError, Exception) as e:
-        print(f"[dynamic form] Failed to parse LLM response: {e}")
-        print(f"[dynamic form] Raw response: {response.content[:200]}")
-        print(f"[dynamic form] Falling back to static for {dimension}")
-        builder = DIMENSION_BUILDERS.get(dimension)
-        return builder() if builder else [
-            UIFormField(name="q1", label=f"Rate this candidate's {label.lower()}", type="select",
-                        options=LIKERT_OPTIONS, required=True),
-        ]
-
-
 class AssessmentFormInput(BaseModel):
     dimension: str = Field(description="The dimension key to assess, e.g. strategic_leadership, crisis_leadership")
     target_leader_id: str = Field(description="Identifier of the candidate being assessed")
@@ -427,19 +362,15 @@ class AssessmentFormTool(BaseTool):
 
     def _run(self, dimension: str, target_leader_id: str, evaluator_role: str) -> dict:
         label = DIMENSION_LABELS.get(dimension, dimension)
-
-        if FORM_MODE == "dynamic":
-            fields = _generate_dynamic_fields(dimension, label, evaluator_role)
+        builder = DIMENSION_BUILDERS.get(dimension)
+        if builder:
+            fields = builder()
         else:
-            builder = DIMENSION_BUILDERS.get(dimension)
-            if builder:
-                fields = builder()
-            else:
-                fields = [
-                    UIFormField(name="q1", label=f"Rate this candidate's {label.lower()}", type="select",
-                                options=LIKERT_OPTIONS, required=True),
-                    UIFormField(name="comment", label="Comments (Optional)", type="textarea", required=False),
-                ]
+            fields = [
+                UIFormField(name="q1", label=f"Rate this candidate's {label.lower()}", type="select",
+                            options=LIKERT_OPTIONS, required=True),
+                UIFormField(name="comment", label="Comments (Optional)", type="textarea", required=False),
+            ]
 
         form_result = UIFormResult(
             form_schema=UIFormSchema(

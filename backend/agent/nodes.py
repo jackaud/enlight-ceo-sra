@@ -236,7 +236,17 @@ async def collecting_node(state: AssessmentState) -> dict:
                 "pending_form": tool_result,
             }
 
-    return {"messages": [response]}
+    # Fallback: LLM didn't call the tool — generate form directly
+    tool = AssessmentFormTool()
+    form_result = tool.invoke({
+        "dimension": current_dim,
+        "target_leader_id": state["target_leader"].get("name", ""),
+        "evaluator_role": state["evaluator_role"],
+    })
+    return {
+        "messages": [response],
+        "pending_form": form_result,
+    }
 
 
 def _mock_collecting(state, current_dim, current_label, current_idx):
