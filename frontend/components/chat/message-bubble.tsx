@@ -154,7 +154,7 @@ export function MessageBubble({ message, onFormSubmit, onFormCancel }: MessageBu
                     const extractText = (node: React.ReactNode): void => {
                       if (typeof node === "string") parts.push(node);
                       if (Array.isArray(node)) node.forEach(extractText);
-                      if (node && typeof node === "object" && "props" in node) extractText(node.props.children);
+                      if (node && typeof node === "object" && "props" in node) extractText((node as { props: { children?: React.ReactNode } }).props.children);
                     };
                     extractText(children);
                     const full = parts.join("");
