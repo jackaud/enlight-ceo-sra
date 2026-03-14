@@ -1,0 +1,8 @@
+fastapi>=0.115
+uvicorn>=0.34
+python-socketio>=5.12
+langchain-core>=0.3
+langchain-anthropic>=0.3
+langgraph>=0.4
+pydantic>=2.10
+python-dotenv>=1.0
