@@ -154,15 +154,15 @@
   }
   html {
     @apply font-sans;
-    /* Fluid base font: scales from 14px (small) to 17px (large screens) */
-    font-size: clamp(0.875rem, 0.8rem + 0.4vw, 1.0625rem);
+    /* Fluid base font: scales from 15px (mobile) to 17px (large screens) */
+    font-size: clamp(0.9375rem, 0.85rem + 0.4vw, 1.0625rem);
   }
   /* Hide Next.js dev tools floating button */
   [data-next-mark] { display: none !important; }
   nextjs-portal { display: none !important; }
 }
 
-/* Full-viewport app shell — explicit CSS to guarantee it works */
+/* Full-viewport app shell — dvh for mobile Safari, vh as fallback */
 .app-shell {
   position: fixed;
   top: 0;
@@ -171,6 +171,7 @@
   bottom: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
 }

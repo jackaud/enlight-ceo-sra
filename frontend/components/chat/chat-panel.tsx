@@ -45,16 +45,16 @@ export function ChatPanel() {
             <Image
               src="/sb-logo.png"
               alt="Sterling Black"
-              width={140}
-              height={51}
-              className="brightness-100"
+              width={160}
+              height={58}
+              className="brightness-100 w-[120px] sm:w-[160px] h-auto"
             />
             <div className="h-8 w-px bg-sb-gold/40" />
             <div>
-              <span className="text-sm font-light tracking-[0.2em] text-white/90 uppercase">
+              <span className="text-base font-light tracking-[0.2em] text-white/90 uppercase">
                 EnlightIn
               </span>
-              <span className="block text-[11px] tracking-[0.15em] text-sb-gold/80 uppercase">
+              <span className="block text-xs tracking-[0.15em] text-sb-gold/80 uppercase">
                 CEO Succession
               </span>
             </div>

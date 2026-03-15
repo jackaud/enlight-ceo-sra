@@ -78,7 +78,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           placeholder={listening ? "Listening..." : "Type a message..."}
           disabled={disabled}
           rows={1}
-          className="min-w-0 flex-1 resize-none rounded-lg border border-sb-warm-border bg-sb-surface px-4 py-3 text-sm text-sb-dark outline-none transition-colors focus:border-sb-gold focus:ring-1 focus:ring-sb-gold/30 disabled:opacity-50 placeholder:text-sb-muted"
+          className="min-w-0 flex-1 resize-none rounded-lg border border-sb-warm-border bg-sb-surface px-4 py-3 text-base text-sb-dark outline-none transition-colors focus:border-sb-gold focus:ring-1 focus:ring-sb-gold/30 disabled:opacity-50 placeholder:text-sb-muted"
         />
         {speechSupported && (
           <button
@@ -101,7 +101,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}
-          className="shrink-0 rounded-lg bg-sb-gold px-6 py-3 text-xs font-medium tracking-[0.15em] text-sb-dark uppercase transition-colors hover:bg-sb-gold-hover disabled:opacity-40 disabled:cursor-not-allowed"
+          className="shrink-0 rounded-lg bg-sb-gold px-6 py-3 text-sm font-medium tracking-[0.15em] text-sb-dark uppercase transition-colors hover:bg-sb-gold-hover disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Send
         </button>

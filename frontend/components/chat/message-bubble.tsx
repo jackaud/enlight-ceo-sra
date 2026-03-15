@@ -76,9 +76,9 @@ function ScoreBar({ label, score, rating }: { label: string; score: number; rati
     score >= 70 ? "bg-emerald-400" : score >= 50 ? "bg-sb-gold" : score >= 30 ? "bg-amber-400" : "bg-red-400";
   return (
     <div className="mb-1.5 last:mb-0">
-      <div className="flex justify-between text-xs mb-0.5">
-        <span className="text-white/80">{label}</span>
-        <span className="text-white/60">{score}/100 · {rating}</span>
+      <div className="flex justify-between text-sm mb-0.5">
+        <span className="text-white/90">{label}</span>
+        <span className="text-white/70">{score}/100 · {rating}</span>
       </div>
       <div className="h-1.5 w-full rounded-full bg-white/10">
         <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${score}%` }} />
@@ -129,10 +129,10 @@ export function MessageBubble({ message, onFormSubmit, onFormCancel }: MessageBu
         {/* Message content */}
         <div
           className={cn(
-            "rounded-2xl px-5 py-3.5 text-sm leading-relaxed",
+            "rounded-2xl px-5 py-4 text-[0.935rem] leading-relaxed",
             isUser
               ? "bg-sb-warm text-sb-charcoal rounded-br-sm"
-              : "bg-sb-dark text-white/90 rounded-bl-sm shadow-md"
+              : "bg-sb-dark text-white/95 rounded-bl-sm shadow-md"
           )}
         >
           {isUser ? (
@@ -142,7 +142,7 @@ export function MessageBubble({ message, onFormSubmit, onFormCancel }: MessageBu
               components={{
                 p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                 strong: ({ children }) => <strong className="font-semibold text-sb-gold">{children}</strong>,
-                em: ({ children }) => <em className="italic text-white/60">{children}</em>,
+                em: ({ children }) => <em className="italic text-white/70">{children}</em>,
                 ul: ({ children }) => <ul className="mb-2 ml-4 list-disc last:mb-0">{children}</ul>,
                 ol: ({ children }) => <ol className="mb-2 ml-4 list-decimal last:mb-0">{children}</ol>,
                 li: ({ children }) => {
